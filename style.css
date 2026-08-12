@@ -317,8 +317,8 @@ p, h1, h2, h3, h4, h5, h6, span, a, li, td, th {
    4. Hero Section
    -------------------------------------------------------------------------- */
 .hero-section {
-  padding: 65px 24px 35px;
-  text-align: center;
+  padding: 80px 24px 35px;
+  scroll-margin-top: 90px;
   position: relative;
   z-index: 1;
 }
@@ -477,6 +477,7 @@ p, h1, h2, h3, h4, h5, h6, span, a, li, td, th {
 
 .search-input, #searchInput {
   width: 100%;
+  box-sizing: border-box;
   background: var(--bg-secondary);
   border: 1px solid var(--border-color);
   color: var(--text-main);
