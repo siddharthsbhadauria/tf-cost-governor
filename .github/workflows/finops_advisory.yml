@@ -1,4 +1,4 @@
-name: Automated Multi-Cloud FinOps & IaC Policy Scan
+name: Automated Multi-Cloud FinOps Scan & Pages Deployment
 
 on:
   push:
@@ -10,9 +10,18 @@ on:
 
 permissions:
   contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
 
 jobs:
-  evaluate-governance:
+  evaluate-and-deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
 
     steps:
@@ -39,3 +48,15 @@ jobs:
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           git add data/governance_data.json data/governance_data.js
           git diff --quiet && git diff --staged --quiet || (git commit -m "auto: update IaC governance metrics & RAG executive brief [skip ci]" && git push)
+
+      - name: Setup GitHub Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload Static Pages Artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: '.'
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
