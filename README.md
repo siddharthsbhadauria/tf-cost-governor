@@ -1,10 +1,12 @@
 # 🛡️ TF Cost Governor
 > **Automated Multi-Cloud Terraform FinOps & Security Advisory Engine**
 
+[![Live Dashboard](https://img.shields.io/badge/Live%20Dashboard-GitHub%20Pages-00F0FF?style=for-the-badge&logo=github)](https://siddharthsbhadauria.github.io/tf-cost-governor/)
 [![FinOps Pipeline](https://github.com/siddharthsbhadauria/tf-cost-governor/actions/workflows/finops_advisory.yml/badge.svg)](https://github.com/siddharthsbhadauria/tf-cost-governor/actions/workflows/finops_advisory.yml)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Terraform](https://img.shields.io/badge/Terraform-v1.5+-623CE4.svg?logo=terraform)](https://www.terraform.io/)
 [![DuckDB](https://img.shields.io/badge/DuckDB-In--Memory-FFF000.svg?logo=duckdb)](https://duckdb.org/)
+
+🌐 **Live Interactive Web Dashboard**: [https://siddharthsbhadauria.github.io/tf-cost-governor/](https://siddharthsbhadauria.github.io/tf-cost-governor/)
 
 An automated, serverless Multi-Cloud Infrastructure FinOps & Policy Compliance Engine. Built using **Terraform (HCL)** across AWS, GCP, and Azure, evaluated by **DuckDB** inside **GitHub Actions**, and presented via a high-tech **JetBrains Mono** static dashboard.
 
