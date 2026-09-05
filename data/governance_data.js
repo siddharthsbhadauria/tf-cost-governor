@@ -1,5 +1,5 @@
 window.GOVERNANCE_DATA = {
-  "generated_at": "2026-09-04T10:38:08.631364Z",
+  "generated_at": "2026-09-05T09:59:07.107631Z",
   "total_resources": 14,
   "total_monthly_cost": 2743.0,
   "compliance_rate": 100.0,
@@ -56,50 +56,6 @@ window.GOVERNANCE_DATA = {
       "policy_pass": true,
       "policy_rule": "TLS 1.2 & Blob Versioning Active",
       "finops_tip": "Transition cold telemetry logs to Cool / Archive tier after 14 days."
-    },
-    {
-      "type": "google_vertex_ai_endpoint",
-      "id": "google_vertex_ai_endpoint.llm_gateway",
-      "name": "GCP Vertex AI Model Endpoint",
-      "provider": "GCP",
-      "category": "Generative AI",
-      "monthly_cost": 580.0,
-      "policy_pass": true,
-      "policy_rule": "Customer Managed Encryption Key (CMEK)",
-      "finops_tip": "Scale replica count to zero during non-business hours."
-    },
-    {
-      "type": "google_bigquery_dataset",
-      "id": "google_bigquery_dataset.finops_lakehouse",
-      "name": "GCP BigQuery Telemetry Lakehouse",
-      "provider": "GCP",
-      "category": "Data & Analytics",
-      "monthly_cost": 110.0,
-      "policy_pass": true,
-      "policy_rule": "Partitioning & 90-day Expiration Active",
-      "finops_tip": "Use DAY-partitioning on timestamp field to cut query scan costs by 80%."
-    },
-    {
-      "type": "google_bigquery_table",
-      "id": "google_bigquery_table.token_events",
-      "name": "google_bigquery_table.token_events",
-      "provider": "Multi-Cloud",
-      "category": "Infrastructure",
-      "monthly_cost": 25.0,
-      "policy_pass": true,
-      "policy_rule": "Standard Infrastructure Guardrail",
-      "finops_tip": "Review resource tag compliance and autoscaling thresholds."
-    },
-    {
-      "type": "google_container_cluster",
-      "id": "google_container_cluster.autopilot_cluster",
-      "name": "GCP GKE Autopilot Cluster",
-      "provider": "GCP",
-      "category": "Compute & Orchestration",
-      "monthly_cost": 73.0,
-      "policy_pass": true,
-      "policy_rule": "Private Endpoint & CIDR Enforced",
-      "finops_tip": "Autopilot manages node sizing automatically to eliminate idle compute waste."
     },
     {
       "type": "aws_eks_cluster",
@@ -166,6 +122,50 @@ window.GOVERNANCE_DATA = {
       "policy_pass": true,
       "policy_rule": "PAY_PER_REQUEST Mode Active",
       "finops_tip": "Keep on-demand capacity pricing for intermittent lock reads."
+    },
+    {
+      "type": "google_vertex_ai_endpoint",
+      "id": "google_vertex_ai_endpoint.llm_gateway",
+      "name": "GCP Vertex AI Model Endpoint",
+      "provider": "GCP",
+      "category": "Generative AI",
+      "monthly_cost": 580.0,
+      "policy_pass": true,
+      "policy_rule": "Customer Managed Encryption Key (CMEK)",
+      "finops_tip": "Scale replica count to zero during non-business hours."
+    },
+    {
+      "type": "google_bigquery_dataset",
+      "id": "google_bigquery_dataset.finops_lakehouse",
+      "name": "GCP BigQuery Telemetry Lakehouse",
+      "provider": "GCP",
+      "category": "Data & Analytics",
+      "monthly_cost": 110.0,
+      "policy_pass": true,
+      "policy_rule": "Partitioning & 90-day Expiration Active",
+      "finops_tip": "Use DAY-partitioning on timestamp field to cut query scan costs by 80%."
+    },
+    {
+      "type": "google_bigquery_table",
+      "id": "google_bigquery_table.token_events",
+      "name": "google_bigquery_table.token_events",
+      "provider": "Multi-Cloud",
+      "category": "Infrastructure",
+      "monthly_cost": 25.0,
+      "policy_pass": true,
+      "policy_rule": "Standard Infrastructure Guardrail",
+      "finops_tip": "Review resource tag compliance and autoscaling thresholds."
+    },
+    {
+      "type": "google_container_cluster",
+      "id": "google_container_cluster.autopilot_cluster",
+      "name": "GCP GKE Autopilot Cluster",
+      "provider": "GCP",
+      "category": "Compute & Orchestration",
+      "monthly_cost": 73.0,
+      "policy_pass": true,
+      "policy_rule": "Private Endpoint & CIDR Enforced",
+      "finops_tip": "Autopilot manages node sizing automatically to eliminate idle compute waste."
     }
   ]
 };
