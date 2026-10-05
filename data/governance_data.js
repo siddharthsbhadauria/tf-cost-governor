@@ -1,5 +1,5 @@
 window.GOVERNANCE_DATA = {
-  "generated_at": "2026-10-04T11:48:38.500987Z",
+  "generated_at": "2026-10-05T13:39:59.903651Z",
   "total_resources": 14,
   "total_monthly_cost": 2743.0,
   "compliance_rate": 100.0,
