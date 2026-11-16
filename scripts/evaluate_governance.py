@@ -1,19 +1,22 @@
 #!/usr/bin/env python3
 """
-TF Cost Governor - Automated FinOps & Security Advisory Engine
-Powered by DuckDB Analytical In-Memory Database
+TF Cost Governor: reads resource blocks from the Terraform blueprints, maps each type to a
+monthly list-price estimate and the guardrail its blueprint enforces, and totals it in DuckDB.
+No Terraform plan runs and no policy scanner is involved; prices and guardrails live in the specs table below.
 """
 
-import os
 import json
+import os
 import re
-from datetime import datetime
+from datetime import UTC, datetime
+
 import duckdb
 
-def parse_terraform_files():
-    base_dir = os.path.join(os.path.dirname(__file__), "..", "terraform")
+
+def parse_terraform_files(base_dir=None):
+    base_dir = base_dir or os.path.join(os.path.dirname(__file__), "..", "terraform")
     resources = []
-    
+
     # Pre-calculated resource pricing models & security check criteria
     specs = {
         "aws_eks_cluster": {
@@ -109,11 +112,11 @@ def parse_terraform_files():
     }
 
     # Scan directory for terraform files
-    for root, dirs, files in os.walk(base_dir):
+    for root, _dirs, files in os.walk(base_dir):
         for file in files:
             if file.endswith(".tf"):
                 filepath = os.path.join(root, file)
-                with open(filepath, "r", encoding="utf-8") as f:
+                with open(filepath, encoding="utf-8") as f:
                     content = f.read()
                     matches = re.findall(r'resource\s+"([^"]+)"\s+"([^"]+)"', content)
                     for res_type, res_name in matches:
@@ -142,9 +145,10 @@ def parse_terraform_files():
                         })
     return resources
 
-def run_duckdb_analysis(resources):
+def analyse(resources):
+    """Totals cost and guardrail status in DuckDB and returns the dashboard dataset."""
     con = duckdb.connect(database=':memory:')
-    
+
     # Create table in DuckDB
     con.execute("""
         CREATE TABLE iac_resources (
@@ -159,7 +163,7 @@ def run_duckdb_analysis(resources):
             finops_tip VARCHAR
         )
     """)
-    
+
     for r in resources:
         con.execute("""
             INSERT INTO iac_resources VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -182,16 +186,15 @@ def run_duckdb_analysis(resources):
 
     # Generate Executive RAG Summary
     top_cost_res = con.execute("SELECT name, monthly_cost, finops_tip FROM iac_resources ORDER BY monthly_cost DESC LIMIT 1").fetchone()
-    
-    summary_markdown = f"""### 🛡️ Multi-Cloud IaC Governance Summary
-* **Total Monthly Estimated IaC Spend**: **${total_cost:,.2f}/mo** across **{total_resources} Tracked Resources**.
-* **Policy Compliance Rating**: **{compliance_rate}% PASSED** (0 High-Severity Security Violations).
-* **Primary Cost Driver**: **{top_cost_res[0]}** (${top_cost_res[1]:,.2f}/mo).
-* **Key Advisory Recommendation**: {top_cost_res[2]}
-* **Data Verification Gate**: Verified via DuckDB In-Memory Analytical Engine & Checkov Policy Checks."""
+
+    summary_markdown = f"""### Terraform cost summary
+* **Estimated monthly cost**: ${total_cost:,.2f} across {total_resources} resources.
+* **Guardrails in place**: {compliance_rate}% of resources.
+* **Largest cost**: {top_cost_res[0]} (${top_cost_res[1]:,.2f} a month).
+* **Suggestion**: {top_cost_res[2]}"""
 
     dataset = {
-        "generated_at": datetime.utcnow().isoformat() + "Z",
+        "generated_at": datetime.now(UTC).isoformat().replace("+00:00", "Z"),
         "total_resources": total_resources,
         "total_monthly_cost": round(total_cost, 2),
         "compliance_rate": compliance_rate,
@@ -201,8 +204,14 @@ def run_duckdb_analysis(resources):
         },
         "resources": resources
     }
+    con.close()
+    return dataset
 
-    # Save to data directory
+
+def write_dataset(dataset):
+    total_resources = dataset["total_resources"]
+    total_cost = dataset["total_monthly_cost"]
+    compliance_rate = dataset["compliance_rate"]
     data_dir = os.path.join(os.path.dirname(__file__), "..", "data")
     os.makedirs(data_dir, exist_ok=True)
 
@@ -217,5 +226,4 @@ def run_duckdb_analysis(resources):
     print(f"[OK] Evaluated {total_resources} IaC resources. Total Cost: ${total_cost:,.2f}/mo. Compliance: {compliance_rate}%.")
 
 if __name__ == "__main__":
-    res = parse_terraform_files()
-    run_duckdb_analysis(res)
+    write_dataset(analyse(parse_terraform_files()))

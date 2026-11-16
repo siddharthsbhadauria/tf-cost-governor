@@ -1,54 +1,47 @@
-# 🛡️ TF Cost Governor
-> **Automated Multi-Cloud Terraform FinOps & Security Advisory Engine**
+# tf-cost-governor
 
-[![Live Dashboard](https://img.shields.io/badge/Live%20Dashboard-GitHub%20Pages-00F0FF?style=for-the-badge&logo=github)](https://siddharthsbhadauria.github.io/tf-cost-governor/)
-[![FinOps Pipeline](https://github.com/siddharthsbhadauria/tf-cost-governor/actions/workflows/finops_advisory.yml/badge.svg)](https://github.com/siddharthsbhadauria/tf-cost-governor/actions/workflows/finops_advisory.yml)
-[![Terraform](https://img.shields.io/badge/Terraform-v1.5+-623CE4.svg?logo=terraform)](https://www.terraform.io/)
-[![DuckDB](https://img.shields.io/badge/DuckDB-In--Memory-FFF000.svg?logo=duckdb)](https://duckdb.org/)
+[![CI](https://github.com/siddharthsbhadauria/tf-cost-governor/actions/workflows/ci.yml/badge.svg)](https://github.com/siddharthsbhadauria/tf-cost-governor/actions/workflows/ci.yml)
+[![Daily run](https://github.com/siddharthsbhadauria/tf-cost-governor/actions/workflows/finops_advisory.yml/badge.svg)](https://github.com/siddharthsbhadauria/tf-cost-governor/actions/workflows/finops_advisory.yml)
 
-🌐 **Live Interactive Web Dashboard**: [https://siddharthsbhadauria.github.io/tf-cost-governor/](https://siddharthsbhadauria.github.io/tf-cost-governor/)
+What three multi-cloud Terraform blueprints would cost each month, worked out before anyone runs `terraform apply`.
 
-An automated, serverless Multi-Cloud Infrastructure FinOps & Policy Compliance Engine. Built using **Terraform (HCL)** across AWS, GCP, and Azure, evaluated by **DuckDB** inside **GitHub Actions**, and presented via a high-tech **JetBrains Mono** static dashboard.
+**Dashboard:** https://siddharthsbhadauria.github.io/tf-cost-governor/
 
----
+## What's in the blueprints
 
-## ⚡ Key Architectural Features
+| Folder | Stack |
+| :--- | :--- |
+| `terraform/aws` | EKS cluster with a g5.2xlarge GPU node group, S3 data lake bucket with KMS and public access block, DynamoDB state lock table |
+| `terraform/gcp` | Vertex AI endpoint, BigQuery dataset and table, GKE Autopilot cluster |
+| `terraform/azure` | AKS cluster, Cosmos DB account, geo-redundant storage account |
 
-- **Multi-Cloud Terraform Blueprints**: Real-world production IaC code blocks for AWS EKS, GCP Vertex AI & BigQuery, and Azure AKS & Cosmos DB.
-- **DuckDB Analytical Engine**: In-memory SQL processing of IaC pricing structures, monthly spend calculations, and policy compliance rates.
-- **Automated CI/CD Governance**: GitHub Actions workflow runs daily at 06:00 UTC to evaluate IaC changes and auto-update metrics.
-- **JetBrains Mono Digital UI**: Dual theme system with high-contrast warm Light Mode and obsidian Cyber Dark Mode.
+## How it works
 
----
+`scripts/evaluate_governance.py` runs every morning at 06:00 UTC on GitHub Actions.
 
-## 🛠️ Tech Stack & Tools
+1. It reads every `resource` block in the `.tf` files. Nothing is planned or applied.
+2. Each resource type maps to an on-demand monthly price estimate and the guardrail its blueprint enforces, such as KMS encryption, IMDSv2 or a private endpoint. Types without a price, like resource groups and bucket settings, are billed through a parent resource and count as $0.
+3. DuckDB totals cost by cloud and by resource and works out the share of resources with their guardrail in place.
+4. The results are written to `data/governance_data.json` and published to GitHub Pages.
 
-- **IaC**: Terraform (HCL), HashiCorp Modules, AWS Provider, GCP Provider, AzureRM Provider
-- **Policy & FinOps**: Infracost CLI Model, Checkov Policy Guardrails, OPA / Rego Rules
-- **Engine**: Python 3.11, DuckDB In-Memory Analytical Database
-- **Automation**: GitHub Actions, GitHub Pages
-- **Frontend**: Vanilla JS, CSS3 Design System, JetBrains Mono
+The prices are fixed estimates kept in the script, not live quotes. Real bills move with usage, region and discounts, so read them as a sizing guide. There is no policy scanner such as Checkov in the loop; the guardrails are recorded per resource type.
 
----
-
-## 🚀 Local Development
+## Run it locally
 
 ```bash
-# 1. Clone repository
-git clone https://github.com/siddharthsbhadauria/tf-cost-governor.git
-cd tf-cost-governor
-
-# 2. Install dependencies
-pip install duckdb
-
-# 3. Execute evaluation engine
+pip install -r requirements.txt
 python scripts/evaluate_governance.py
-
-# 4. Host local server
-python -m http.server 8080
+python -m http.server 8080          # then open http://localhost:8080
 ```
 
----
+Tests and lint:
 
-## 📄 License
-MIT &copy; 2026 Siddharth Singh Bhadauria
+```bash
+pip install -r requirements-dev.txt
+ruff check .
+pytest -q
+```
+
+## License
+
+MIT
