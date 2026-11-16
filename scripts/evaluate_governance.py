@@ -117,14 +117,17 @@ def parse_terraform_files():
                     content = f.read()
                     matches = re.findall(r'resource\s+"([^"]+)"\s+"([^"]+)"', content)
                     for res_type, res_name in matches:
+                        # Types without a pricing spec are config or container resources
+                        # (resource groups, bucket settings, tables) with no direct charge.
+                        cloud = {"aws": "AWS", "google": "GCP", "azurerm": "Azure"}.get(res_type.split("_")[0], "Other")
                         spec = specs.get(res_type, {
                             "name": f"{res_type}.{res_name}",
-                            "provider": "Multi-Cloud",
-                            "category": "Infrastructure",
-                            "monthly_cost": 25.00,
+                            "provider": cloud,
+                            "category": "Configuration",
+                            "monthly_cost": 0.0,
                             "policy_pass": True,
-                            "policy_rule": "Standard Infrastructure Guardrail",
-                            "finops_tip": "Review resource tag compliance and autoscaling thresholds."
+                            "policy_rule": "No direct cost; billed through its parent resource",
+                            "finops_tip": "Keep tags consistent so cost reports roll up to the parent."
                         })
                         resources.append({
                             "type": res_type,

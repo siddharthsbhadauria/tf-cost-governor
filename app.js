@@ -1,204 +1,151 @@
-// ==========================================================================
-// TF Cost Governor - Frontend Interactive Engine
-// ==========================================================================
+// TF Cost Governor dashboard. Renders data/governance_data.js (window.GOVERNANCE_DATA).
 
-let appState = {
-  resources: [],
-  filtered: [],
-  selectedProvider: 'ALL',
-  searchQuery: '',
-  sortBy: 'cost-desc'
-};
+const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({
+  '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+}[c]));
+const money = (n, dp = 0) => `$${n.toLocaleString('en-US', { minimumFractionDigits: dp, maximumFractionDigits: dp })}`;
+const CHECK = '<svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 8.5l3 3 7-7"/></svg>';
 
-document.addEventListener('DOMContentLoaded', () => {
+const state = { resources: [], cloud: '', query: '' };
+
+document.addEventListener('DOMContentLoaded', async () => {
   initTheme();
-  initApp();
+  let data = window.GOVERNANCE_DATA;
+  if (!data) {
+    try { data = await (await fetch('data/governance_data.json')).json(); } catch (e) { data = null; }
+  }
+  if (data && data.resources?.length) {
+    state.resources = data.resources;
+    renderUpdated(data.generated_at);
+    renderHeadline(data.resources);
+    renderClouds(data.resources);
+    renderBars(data.resources);
+    initTable();
+  } else {
+    document.getElementById('tableBody').innerHTML = '<tr><td colspan="5" class="empty">The dataset could not be loaded.</td></tr>';
+  }
+  initBand();
+  initReveal();
 });
 
 function initTheme() {
-  const savedTheme = localStorage.getItem('theme');
-  const prefersLight = window.matchMedia('(prefers-color-scheme: light)').matches;
-  const initialTheme = savedTheme || (prefersLight ? 'light' : 'dark');
-
-  document.documentElement.setAttribute('data-theme', initialTheme);
-
-  const themeToggleBtn = document.getElementById('themeToggle');
-  if (themeToggleBtn) {
-    themeToggleBtn.addEventListener('click', () => {
-      const currentTheme = document.documentElement.getAttribute('data-theme');
-      const newTheme = currentTheme === 'light' ? 'dark' : 'light';
-      document.documentElement.setAttribute('data-theme', newTheme);
-      localStorage.setItem('theme', newTheme);
-      showToast(newTheme === 'dark' ? '🌙 Dark Mode Activated' : '☀️ Light Mode Activated');
-    });
-  }
-}
-
-function showToast(message) {
-  const toast = document.getElementById('toast');
-  const toastMsg = document.getElementById('toastMessage') || toast;
-  toastMsg.textContent = message;
-  toast.classList.add('show');
-
-  setTimeout(() => {
-    toast.classList.remove('show');
-  }, 3000);
-}
-
-async function initApp() {
-  setupEventListeners();
-
-  let data = window.GOVERNANCE_DATA;
-
-  if (!data) {
-    try {
-      const response = await fetch('data/governance_data.json');
-      if (response.ok) {
-        data = await response.json();
-      }
-    } catch (err) {
-      console.warn('Could not fetch json file:', err);
-    }
-  }
-
-  if (data) {
-    appState.resources = data.resources || [];
-    renderStats(data);
-    renderBriefSummary(data.summary);
-    renderProviderPills(data.providers || []);
-    applyFiltersAndSort();
-  }
-}
-
-function renderStats(data) {
-  document.getElementById('statResources').textContent = data.total_resources || 0;
-  document.getElementById('statMonthlySpend').textContent = `$${(data.total_monthly_cost || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}/mo`;
-  document.getElementById('statCompliance').textContent = `${data.compliance_rate || 100}% PASSED`;
-
-  if (data.generated_at) {
-    const dateObj = new Date(data.generated_at);
-    document.getElementById('lastUpdatedTag').textContent = `Last updated: ${dateObj.toLocaleDateString()} ${dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
-  }
-}
-
-function renderBriefSummary(summary) {
-  if (!summary || !summary.markdown_brief) return;
-  const rawMarkdown = summary.markdown_brief;
-  const formattedHtml = rawMarkdown
-    .replace(/^### (.*$)/gim, '<h3>$1</h3>')
-    .replace(/^#### (.*$)/gim, '<h4>$1</h4>')
-    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-    .replace(/^\* (.*$)/gim, '<li>$1</li>')
-    .replace(/^- (.*$)/gim, '<li>$1</li>')
-    .replace(/\n\n/g, '<br>');
-
-  document.getElementById('briefContent').innerHTML = formattedHtml;
-}
-
-function renderProviderPills(providers) {
-  const container = document.getElementById('providerContainer');
-  container.querySelectorAll('.cat-pill:not([data-provider="ALL"])').forEach(el => el.remove());
-
-  providers.sort().forEach(prov => {
-    const btn = document.createElement('button');
-    btn.className = 'cat-pill';
-    btn.dataset.provider = prov;
-    btn.textContent = prov;
-    btn.addEventListener('click', () => {
-      container.querySelectorAll('.cat-pill').forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-      appState.selectedProvider = prov;
-      applyFiltersAndSort();
-    });
-    container.appendChild(btn);
+  const root = document.documentElement;
+  const dark = matchMedia('(prefers-color-scheme: dark)');
+  document.getElementById('themeToggle').addEventListener('click', () => {
+    const next = (root.dataset.theme || (dark.matches ? 'dark' : 'light')) === 'dark' ? 'light' : 'dark';
+    root.dataset.theme = next;
+    try { localStorage.setItem('theme', next); } catch (e) {}
   });
 }
 
-function setupEventListeners() {
-  const searchInput = document.getElementById('searchInput');
-  const clearBtn = document.getElementById('clearSearch');
-  const sortSelect = document.getElementById('sortSelect');
-  const allCatBtn = document.querySelector('.cat-pill[data-provider="ALL"]');
-
-  if (searchInput) {
-    searchInput.addEventListener('input', (e) => {
-      appState.searchQuery = e.target.value.toLowerCase().trim();
-      if (clearBtn) clearBtn.classList.toggle('show', appState.searchQuery.length > 0);
-      applyFiltersAndSort();
-    });
-  }
-
-  if (clearBtn) {
-    clearBtn.addEventListener('click', () => {
-      if (searchInput) searchInput.value = '';
-      appState.searchQuery = '';
-      clearBtn.classList.remove('show');
-      applyFiltersAndSort();
-    });
-  }
-
-  if (allCatBtn) {
-    allCatBtn.addEventListener('click', () => {
-      document.querySelectorAll('.cat-pill').forEach(b => b.classList.remove('active'));
-      allCatBtn.classList.add('active');
-      appState.selectedProvider = 'ALL';
-      applyFiltersAndSort();
-    });
-  }
-
-  if (sortSelect) {
-    sortSelect.addEventListener('change', (e) => {
-      appState.sortBy = e.target.value;
-      applyFiltersAndSort();
-    });
-  }
+function renderUpdated(iso) {
+  if (!iso) return;
+  const d = new Date(iso);
+  document.getElementById('updated').textContent =
+    `Updated ${d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}`;
 }
 
-function applyFiltersAndSort() {
-  let list = [...appState.resources];
+/* ---------- Band ---------- */
 
-  if (appState.selectedProvider !== 'ALL') {
-    list = list.filter(item => item.provider === appState.selectedProvider);
-  }
-
-  if (appState.searchQuery) {
-    const q = appState.searchQuery;
-    list = list.filter(item =>
-      item.name.toLowerCase().includes(q) ||
-      item.provider.toLowerCase().includes(q) ||
-      item.category.toLowerCase().includes(q) ||
-      item.type.toLowerCase().includes(q)
-    );
-  }
-
-  switch (appState.sortBy) {
-    case 'cost-desc':
-      list.sort((a, b) => b.monthly_cost - a.monthly_cost);
-      break;
-    case 'cost-asc':
-      list.sort((a, b) => a.monthly_cost - b.monthly_cost);
-      break;
-    case 'name-asc':
-      list.sort((a, b) => a.name.localeCompare(b.name));
-      break;
-  }
-
-  appState.filtered = list;
-  document.getElementById('resultsCount').textContent = `Showing ${list.length} of ${appState.resources.length} tracked IaC resources`;
-
-  renderTable(list);
+function renderHeadline(res) {
+  const total = res.reduce((s, r) => s + r.monthly_cost, 0);
+  const top = [...res].sort((a, b) => b.monthly_cost - a.monthly_cost)[0];
+  const share = Math.round((top.monthly_cost / total) * 100);
+  const priced = res.filter((r) => r.monthly_cost > 0);
+  const passing = priced.filter((r) => r.policy_pass).length;
+  const cards = [
+    { value: `${money(total)}`, label: `a month, estimated, to run all ${res.length} resources across AWS, GCP and Azure.`, context: `${money(total * 12)} a year` },
+    { value: `${share}%`, label: `of that is one resource: the ${top.name}.`, context: money(top.monthly_cost, 2) + ' / month' },
+    { value: `${passing} of ${priced.length}`, label: 'priced resources enforce their security guardrail.', context: 'KMS, IMDSv2, private endpoints, TLS 1.2' },
+  ];
+  document.getElementById('headline').innerHTML = cards.map((c) => `
+    <div class="outcome">
+      <dt class="outcome-label">${esc(c.label)}</dt>
+      <dd class="outcome-value">${esc(c.value)}</dd>
+      <dd class="outcome-context">${esc(c.context)}</dd>
+    </div>`).join('');
 }
 
-function renderTable(items) {
-  const tbody = document.getElementById('tableBody');
-  tbody.innerHTML = items.map(item => `
+/* ---------- Spend ---------- */
+
+function renderClouds(res) {
+  const order = ['AWS', 'GCP', 'Azure'];
+  const groups = order.map((c) => {
+    const rs = res.filter((r) => r.provider === c);
+    return { c, total: rs.reduce((s, r) => s + r.monthly_cost, 0), n: rs.length };
+  }).filter((g) => g.n);
+  document.getElementById('clouds').innerHTML = groups.map((g) => `
+    <div class="cloud">
+      <p class="cloud-name">${esc(g.c)}</p>
+      <p class="cloud-total">${money(g.total)}</p>
+      <p class="cloud-meta">${g.n} resources · per month</p>
+    </div>`).join('');
+}
+
+function renderBars(res) {
+  const sorted = [...res].filter((r) => r.monthly_cost > 0).sort((a, b) => b.monthly_cost - a.monthly_cost);
+  const free = res.filter((r) => !r.monthly_cost);
+  const max = sorted[0].monthly_cost;
+  const list = document.getElementById('bars');
+  list.innerHTML = sorted.map((r) => `
+    <li class="bar-row">
+      <span class="bar-name">${esc(r.name)}<small>${esc(r.provider)} · ${esc(r.id)}</small></span>
+      <span class="bar-track" aria-hidden="true"><i style="width:${(r.monthly_cost / max) * 100}%"></i></span>
+      <span class="bar-cost">${money(r.monthly_cost, 2)}</span>
+    </li>`).join('') + (free.length ? `
+    <li class="bar-row is-zero">
+      <span class="bar-name bar-free">${free.length} more resources billed through a parent<small>${free.map((r) => esc(r.id)).join('<br>')}</small></span>
+      <span class="bar-cost">$0.00</span>
+    </li>` : '');
+  if (!document.documentElement.classList.contains('motion')) { list.classList.add('in'); return; }
+  const io = new IntersectionObserver(([e]) => {
+    if (e.isIntersecting) { list.classList.add('in'); io.disconnect(); }
+  }, { rootMargin: '0px 0px -15% 0px' });
+  io.observe(list);
+}
+
+/* ---------- Table ---------- */
+
+function initTable() {
+  const select = document.getElementById('cloudSelect');
+  [...new Set(state.resources.map((r) => r.provider))].sort().forEach((c) => select.add(new Option(c, c)));
+  select.addEventListener('change', () => { state.cloud = select.value; renderTable(); });
+  document.getElementById('searchInput').addEventListener('input', (e) => { state.query = e.target.value.trim().toLowerCase(); renderTable(); });
+  renderTable();
+}
+
+function renderTable() {
+  const rows = state.resources
+    .filter((r) => !state.cloud || r.provider === state.cloud)
+    .filter((r) => !state.query || `${r.name} ${r.id} ${r.policy_rule} ${r.category}`.toLowerCase().includes(state.query))
+    .sort((a, b) => b.monthly_cost - a.monthly_cost);
+  document.getElementById('resultCount').textContent = `${rows.length} of ${state.resources.length} resources`;
+  document.getElementById('tableBody').innerHTML = rows.length ? rows.map((r) => `
     <tr>
-      <td style="font-weight: 700; color: var(--text-main);">${item.name}</td>
-      <td><span class="pill-provider">${item.provider}</span></td>
-      <td style="color: var(--text-muted); font-size: 12px;">${item.category}</td>
-      <td style="font-family: var(--font-mono); font-weight: 800; color: var(--accent-cyan);">$${item.monthly_cost.toFixed(2)}</td>
-      <td><span class="score-badge">✔ ${item.policy_rule}</span></td>
-      <td style="font-size: 12px; color: var(--text-muted); max-width: 380px;">${item.finops_tip}</td>
-    </tr>
-  `).join('');
+      <td class="res">${esc(r.monthly_cost ? r.name : r.category)}<span class="addr">${esc(r.id)}</span></td>
+      <td class="cloud-col">${esc(r.provider)}</td>
+      <td class="rule">${r.policy_pass ? `<span class="status">${CHECK}Pass</span>` : '<span class="status fail">Fail</span>'}<br>${esc(r.policy_rule)}</td>
+      <td class="num">${money(r.monthly_cost, 2)}</td>
+      <td class="tip-col">${esc(r.finops_tip)}</td>
+    </tr>`).join('') : '<tr><td colspan="5" class="empty">No resources match.</td></tr>';
+}
+
+/* ---------- Motion ---------- */
+
+function initBand() {
+  const band = document.querySelector('.outcomes');
+  if (!document.documentElement.classList.contains('motion')) { band.classList.add('in'); return; }
+  const open = () => { band.classList.add('in'); removeEventListener('scroll', check); };
+  const check = () => { if (scrollY > 80 || band.getBoundingClientRect().top < innerHeight * 0.45) open(); };
+  addEventListener('scroll', check, { passive: true });
+  check();
+}
+
+function initReveal() {
+  const els = document.querySelectorAll('.reveal');
+  if (!document.documentElement.classList.contains('motion')) { els.forEach((el) => el.classList.add('in')); return; }
+  const io = new IntersectionObserver((entries) => entries.forEach((e) => {
+    if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); }
+  }), { rootMargin: '0px 0px -8% 0px' });
+  els.forEach((el) => io.observe(el));
 }
