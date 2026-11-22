@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-11-21T14:14:53.658207Z",
+  "generated_at": "2026-11-22T14:04:58.530745Z",
   "total_resources": 14,
   "total_monthly_cost": 2643.0,
   "compliance_rate": 100.0,
@@ -12,6 +12,50 @@
     "markdown_brief": "### Terraform cost summary\n* **Estimated monthly cost**: $2,643.00 across 14 resources.\n* **Guardrails in place**: 100.0% of resources.\n* **Largest cost**: AWS EKS Node Group (g5.2xlarge GPU) ($1,004.80 a month).\n* **Suggestion**: Implement Karpenter autoscaling with mixed instance types to save 35%."
   },
   "resources": [
+    {
+      "type": "azurerm_resource_group",
+      "id": "azurerm_resource_group.rg",
+      "name": "azurerm_resource_group.rg",
+      "provider": "Azure",
+      "category": "Configuration",
+      "monthly_cost": 0.0,
+      "policy_pass": true,
+      "policy_rule": "No direct cost; billed through its parent resource",
+      "finops_tip": "Keep tags consistent so cost reports roll up to the parent."
+    },
+    {
+      "type": "azurerm_kubernetes_cluster",
+      "id": "azurerm_kubernetes_cluster.aks",
+      "name": "Azure AKS Cluster (Standard_D4s_v5)",
+      "provider": "Azure",
+      "category": "Compute & Orchestration",
+      "monthly_cost": 416.1,
+      "policy_pass": true,
+      "policy_rule": "System-Assigned Managed Identity",
+      "finops_tip": "Leverage Azure Reserved Instances (1-yr) to reduce monthly node spend by 40%."
+    },
+    {
+      "type": "azurerm_cosmosdb_account",
+      "id": "azurerm_cosmosdb_account.db",
+      "name": "Azure Cosmos DB NoSQL Account",
+      "provider": "Azure",
+      "category": "Database",
+      "monthly_cost": 290.0,
+      "policy_pass": true,
+      "policy_rule": "Session Consistency & Regional Failover",
+      "finops_tip": "Enable Cosmos DB Autoscale throughput to avoid overprovisioning RU/s."
+    },
+    {
+      "type": "azurerm_storage_account",
+      "id": "azurerm_storage_account.storage",
+      "name": "Azure Blob Storage Account (GRS)",
+      "provider": "Azure",
+      "category": "Storage & Data",
+      "monthly_cost": 38.4,
+      "policy_pass": true,
+      "policy_rule": "TLS 1.2 & Blob Versioning Active",
+      "finops_tip": "Transition cold telemetry logs to Cool / Archive tier after 14 days."
+    },
     {
       "type": "aws_eks_cluster",
       "id": "aws_eks_cluster.primary",
@@ -77,50 +121,6 @@
       "policy_pass": true,
       "policy_rule": "PAY_PER_REQUEST Mode Active",
       "finops_tip": "Keep on-demand capacity pricing for intermittent lock reads."
-    },
-    {
-      "type": "azurerm_resource_group",
-      "id": "azurerm_resource_group.rg",
-      "name": "azurerm_resource_group.rg",
-      "provider": "Azure",
-      "category": "Configuration",
-      "monthly_cost": 0.0,
-      "policy_pass": true,
-      "policy_rule": "No direct cost; billed through its parent resource",
-      "finops_tip": "Keep tags consistent so cost reports roll up to the parent."
-    },
-    {
-      "type": "azurerm_kubernetes_cluster",
-      "id": "azurerm_kubernetes_cluster.aks",
-      "name": "Azure AKS Cluster (Standard_D4s_v5)",
-      "provider": "Azure",
-      "category": "Compute & Orchestration",
-      "monthly_cost": 416.1,
-      "policy_pass": true,
-      "policy_rule": "System-Assigned Managed Identity",
-      "finops_tip": "Leverage Azure Reserved Instances (1-yr) to reduce monthly node spend by 40%."
-    },
-    {
-      "type": "azurerm_cosmosdb_account",
-      "id": "azurerm_cosmosdb_account.db",
-      "name": "Azure Cosmos DB NoSQL Account",
-      "provider": "Azure",
-      "category": "Database",
-      "monthly_cost": 290.0,
-      "policy_pass": true,
-      "policy_rule": "Session Consistency & Regional Failover",
-      "finops_tip": "Enable Cosmos DB Autoscale throughput to avoid overprovisioning RU/s."
-    },
-    {
-      "type": "azurerm_storage_account",
-      "id": "azurerm_storage_account.storage",
-      "name": "Azure Blob Storage Account (GRS)",
-      "provider": "Azure",
-      "category": "Storage & Data",
-      "monthly_cost": 38.4,
-      "policy_pass": true,
-      "policy_rule": "TLS 1.2 & Blob Versioning Active",
-      "finops_tip": "Transition cold telemetry logs to Cool / Archive tier after 14 days."
     },
     {
       "type": "google_vertex_ai_endpoint",
